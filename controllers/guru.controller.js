@@ -1,5 +1,21 @@
 const { Kelas, Tugas, User, Pengumpulan } = require('../models');
 const { response } = require('../helpers/response.formatter');
+module.exports = { removeSiswaFromKelas };
+module.exports = {
+    getAllKelas,
+    createKelas,
+    updateKelas,
+    deleteKelas,
+    addSiswaToKelas,
+    removeSiswaFromKelas,
+    getAllTugas,
+    createTugas,
+    updateTugas,
+    deleteTugas,
+    getPengumpulanByTugas,
+    giveNilai,
+    getDashboard
+};
 
 // GET semua kelas
 const getAllKelas = async (req, res) => {
@@ -147,10 +163,6 @@ const removeSiswaFromKelas = async (req, res) => {
             siswaIds = JSON.parse(siswaIds);
         }
 
-        if (!siswaIds.includes(parseInt(siswaId))) {
-            return res.status(400).json(response(400, "Siswa tidak terdaftar di kelas ini"));
-        }
-
         siswaIds = siswaIds.filter(id => id != siswaId);
         await kelas.update({ siswaIds });
 
@@ -160,9 +172,6 @@ const removeSiswaFromKelas = async (req, res) => {
     }
 };
 
-module.exports = {
-    removeSiswaFromKelas
-};
 
 // GET semua tugas (dengan total pengumpulan)
 const getAllTugas = async (req, res) => {
@@ -310,18 +319,3 @@ const getDashboard = async (req, res) => {
     }
 };
 
-module.exports = {
-    getAllKelas,
-    createKelas,
-    updateKelas,
-    deleteKelas,
-    addSiswaToKelas,
-    removeSiswaFromKelas,
-    getAllTugas,
-    createTugas,
-    updateTugas,
-    deleteTugas,
-    getPengumpulanByTugas,
-    giveNilai,
-    getDashboard
-};
