@@ -1,21 +1,5 @@
 const { Kelas, Tugas, User, Pengumpulan } = require('../models');
 const { response } = require('../helpers/response.formatter');
-module.exports = { removeSiswaFromKelas };
-module.exports = {
-    getAllKelas,
-    createKelas,
-    updateKelas,
-    deleteKelas,
-    addSiswaToKelas,
-    removeSiswaFromKelas,
-    getAllTugas,
-    createTugas,
-    updateTugas,
-    deleteTugas,
-    getPengumpulanByTugas,
-    giveNilai,
-    getDashboard
-};
 
 // GET semua kelas
 const getAllKelas = async (req, res) => {
@@ -85,70 +69,43 @@ const deleteKelas = async (req, res) => {
     }
 };
 
+// POST tambah siswa ke kelas
 const addSiswaToKelas = async (req, res) => {
     try {
         const { emailSiswa } = req.body;
         const { kelasId } = req.params;
         console.log(' Mencari siswa dengan email:', emailSiswa);
-        // Cari siswa
+        
         const siswa = await User.findOne({ where: { email: emailSiswa, role: 'siswa' } });
         if (!siswa) {
-            console.log('Siswa tidak ditemukan');
             return res.status(404).json(response(404, "Siswa tidak ditemukan"));
         }
 
-        console.log(' Siswa ditemukan:', siswa.id, siswa.nama);
-
-        // Cari kelas
         const kelas = await Kelas.findOne({ where: { id: kelasId, guruId: req.user.id } });
         if (!kelas) {
-            console.log(' Kelas tidak ditemukan');
             return res.status(404).json(response(404, "Kelas tidak ditemukan"));
         }
 
-        console.log(' Kelas ditemukan:', kelas.id, kelas.nama);
-        console.log(' Data siswaIds dari database:', kelas.siswaIds);
-
-        // Ambil siswaIds (pastikan berupa array)
-        let siswaIds = kelas.siswaIds;
-        if (!siswaIds) {
-            siswaIds = [];
-        }
+        let siswaIds = kelas.siswaIds || [];
         if (typeof siswaIds === 'string') {
-            try {
-                siswaIds = JSON.parse(siswaIds);
-            } catch (e) {
-                siswaIds = [];
-            }
+            siswaIds = JSON.parse(siswaIds);
         }
 
-        console.log(' SiswaIds sebelum update:', siswaIds);
-
-        // Cek duplikasi
         if (siswaIds.includes(siswa.id)) {
-            console.log(' Siswa sudah terdaftar');
             return res.status(400).json(response(400, "Siswa sudah terdaftar di kelas ini"));
         }
 
-        // Tambah siswa
         siswaIds.push(siswa.id);
-        console.log(' SiswaIds setelah push:', siswaIds);
-
-        // Update ke database
         await kelas.update({ siswaIds: JSON.stringify(siswaIds) });
 
-        // Verifikasi
-        const kelasBaru = await Kelas.findByPk(kelasId);
-        console.log(' Verifikasi setelah update:', kelasBaru.siswaIds);
-
         return res.status(200).json(response(200, "Siswa berhasil ditambahkan"));
-
     } catch (error) {
-        console.error(' Error di addSiswaToKelas:', error);
+        console.error(' Error:', error);
         return res.status(500).json(response(500, "Server Error", error.message));
     }
 };
 
+// DELETE hapus siswa dari kelas
 const removeSiswaFromKelas = async (req, res) => {
     try {
         const { kelasId, siswaId } = req.params;
@@ -163,8 +120,12 @@ const removeSiswaFromKelas = async (req, res) => {
             siswaIds = JSON.parse(siswaIds);
         }
 
+        if (!siswaIds.includes(parseInt(siswaId))) {
+            return res.status(400).json(response(400, "Siswa tidak terdaftar di kelas ini"));
+        }
+
         siswaIds = siswaIds.filter(id => id != siswaId);
-        await kelas.update({ siswaIds });
+        await kelas.update({ siswaIds: JSON.stringify(siswaIds) });
 
         return res.status(200).json(response(200, "Siswa berhasil dihapus dari kelas"));
     } catch (error) {
@@ -172,8 +133,7 @@ const removeSiswaFromKelas = async (req, res) => {
     }
 };
 
-
-// GET semua tugas (dengan total pengumpulan)
+// GET semua tugas
 const getAllTugas = async (req, res) => {
     try {
         const tugas = await Tugas.findAll({
@@ -181,7 +141,6 @@ const getAllTugas = async (req, res) => {
             include: [{ model: Kelas, as: 'kelas', attributes: ['nama'] }]
         });
 
-        // Hitung total pengumpulan untuk setiap tugas
         const tugasWithCount = await Promise.all(tugas.map(async (t) => {
             const totalDikumpulkan = await Pengumpulan.count({
                 where: { tugasId: t.id }
@@ -269,16 +228,14 @@ const giveNilai = async (req, res) => {
     }
 };
 
-// GET dashboard - semua pengumpulan dari tugas guru
+// GET dashboard
 const getDashboard = async (req, res) => {
     try {
-        // Dapatkan semua tugas milik guru
         const tugasGuru = await Tugas.findAll({
             where: { guruId: req.user.id },
             attributes: ['id', 'judul', 'deadline']
         });
 
-        // Dapatkan semua pengumpulan dari tugas-tugas tersebut
         const tugasIds = tugasGuru.map(t => t.id);
         const pengumpulan = await Pengumpulan.findAll({
             where: { tugasId: tugasIds },
@@ -298,7 +255,6 @@ const getDashboard = async (req, res) => {
             order: [['waktuKumpul', 'DESC']]
         });
 
-        // Hitung statistik
         const totalPengumpulan = pengumpulan.length;
         const sudahDinilai = pengumpulan.filter(p => p.nilai !== null).length;
         const belumDinilai = totalPengumpulan - sudahDinilai;
@@ -319,3 +275,18 @@ const getDashboard = async (req, res) => {
     }
 };
 
+module.exports = {
+    getAllKelas,
+    createKelas,
+    updateKelas,
+    deleteKelas,
+    addSiswaToKelas,
+    removeSiswaFromKelas,
+    getAllTugas,
+    createTugas,
+    updateTugas,
+    deleteTugas,
+    getPengumpulanByTugas,
+    giveNilai,
+    getDashboard
+};

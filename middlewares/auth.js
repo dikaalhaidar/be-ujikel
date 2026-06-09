@@ -1,4 +1,3 @@
-module.exports = { verifyToken, guruOnly, siswaOnly };
 const jwt = require('jsonwebtoken');
 const { response } = require('../helpers/response.formatter');
 const { auth_secret } = require('../config/base.config');
@@ -33,3 +32,4 @@ const siswaOnly = (req, res, next) => {
     next();
 };
 
+module.exports = { verifyToken, guruOnly, siswaOnly };
